@@ -1,0 +1,5 @@
+{
+  "name": "MedTrack AI",
+  "description": "A smart medication tracker that allows users to log pills as they happen, aggregate ingredient dosages, and use AI to manage their logs.",
+  "requestFramePermissions": []
+}
