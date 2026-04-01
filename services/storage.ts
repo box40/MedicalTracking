@@ -1,4 +1,5 @@
-import { UserData, Pill, LogEntry } from '../types';
+import { UserData } from '../types';
+import { getToken, apiSaveData } from './api';
 
 const STORAGE_KEY_PREFIX = 'medtrack_user_';
 const SESSION_KEY = 'medtrack_last_session_email';
@@ -57,6 +58,10 @@ export const saveUserData = (data: UserData) => {
   localStorage.setItem(key, JSON.stringify(data));
   // Ensure session is kept in sync if we save
   localStorage.setItem(SESSION_KEY, data.email.toLowerCase().trim());
+  // Sync to backend when authenticated
+  if (getToken()) {
+    apiSaveData(data).catch(() => { /* best-effort */ });
+  }
 };
 
 export const deleteUserData = (email: string) => {

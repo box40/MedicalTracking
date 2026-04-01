@@ -8,16 +8,29 @@ import { AIAssistant } from './components/AIAssistant';
 import { Reports } from './components/Reports';
 import { Settings } from './components/Settings';
 import { loadUserData, saveUserData, getLastSessionEmail, clearSession, deleteUserData } from './services/storage';
+import { getToken, clearToken, apiGetData } from './services/api';
 import { UserData, AppTab, LogEntry, Pill } from './types';
 
 function App() {
   const [user, setUser] = useState<UserData | null>(() => {
+    // Restore from localStorage cache while we wait for server
     const lastEmail = getLastSessionEmail();
-    if (lastEmail) {
+    if (lastEmail && getToken()) {
       return loadUserData(lastEmail);
     }
     return null;
   });
+
+  // Refresh from server on mount if authenticated
+  useEffect(() => {
+    if (!getToken()) return;
+    apiGetData()
+      .then(serverData => {
+        saveUserData(serverData);
+        setUser(serverData);
+      })
+      .catch(() => { /* offline – keep cached data */ });
+  }, []);
 
   const [activeTab, setActiveTab] = useState<AppTab>(AppTab.DASHBOARD);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -30,16 +43,16 @@ function App() {
     document.documentElement.style.fontSize = size;
   }, [user?.settings?.fontSize]);
 
-  const handleLogin = (email: string) => {
-    const data = loadUserData(email);
+  const handleLogin = (email: string, userData?: UserData) => {
+    const data = userData || loadUserData(email);
     setUser(data);
   };
 
   const handleLogout = () => {
     clearSession();
+    clearToken();
     setUser(null);
     setActiveTab(AppTab.DASHBOARD);
-    // Reset font size on logout optionally, or keep preference. Keeping it is better UX usually.
   };
 
   const handleExportData = () => {
