@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Pill as PillIcon, Eye, EyeOff } from 'lucide-react';
-import { apiLogin, apiRegister, setToken } from '../services/api';
+import React, { useState, useRef } from 'react';
+import { Pill as PillIcon, Eye, EyeOff, Upload } from 'lucide-react';
+import { apiLogin, apiRegister, setToken, apiSaveData } from '../services/api';
 import { saveUserData } from '../services/storage';
 import { UserData } from '../types';
 
@@ -15,6 +15,30 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingBackup, setPendingBackup] = useState<UserData | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        if (json.email && Array.isArray(json.logs)) {
+          setPendingBackup(json);
+          setEmail(json.email);
+          setError('');
+        } else {
+          setError('Invalid backup file. Please upload a valid MedTrack backup.');
+        }
+      } catch {
+        setError('Could not read backup file.');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,9 +50,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const { token, email: serverEmail } = await fn(email.trim(), password);
       setToken(token);
 
-      // Fetch the user's data from the server then pass it up
       const { apiGetData } = await import('../services/api');
-      const userData = await apiGetData();
+      let userData = await apiGetData();
+
+      // If a backup was loaded, push it to the server
+      if (pendingBackup) {
+        const merged: UserData = { ...pendingBackup, email: serverEmail };
+        await apiSaveData(merged);
+        userData = merged;
+      }
+
       saveUserData(userData);
       onLogin(serverEmail, userData);
     } catch (err: any) {
@@ -110,6 +141,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           </div>
 
+          {pendingBackup && (
+            <div className="text-sm text-teal-700 bg-teal-50 border border-teal-200 rounded-lg px-4 py-2">
+              Backup loaded from <strong>{pendingBackup.email}</strong> — it will be imported after you sign in.
+            </div>
+          )}
+
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{error}</p>
           )}
@@ -123,9 +160,24 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
-          Your data is stored securely on the server and synced across all your devices.
-        </p>
+        <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-400 mb-3">Have a backup file from a previous session?</p>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center text-sm text-slate-500 hover:text-teal-600 transition border border-slate-200 px-4 py-2 rounded-lg hover:border-teal-500 hover:bg-slate-50"
+          >
+            <Upload size={16} className="mr-2" />
+            Import Backup File
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json"
+            className="hidden"
+          />
+        </div>
       </div>
     </div>
   );
