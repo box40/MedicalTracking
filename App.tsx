@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, BriefcaseMedical, Bot, Plus, LogOut, Download, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, BriefcaseMedical, Bot, Plus, LogOut, Download, BarChart3, Settings as SettingsIcon, AlertTriangle } from 'lucide-react';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { PillCabinet } from './components/PillCabinet';
@@ -22,6 +22,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<AppTab>(AppTab.DASHBOARD);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<LogEntry | null>(null);
+  const [isExampleMode, setIsExampleMode] = useState(false);
+  const [originalUser, setOriginalUser] = useState<UserData | null>(null);
 
   // Apply Font Size Global Scaling
   useEffect(() => {
@@ -73,7 +75,7 @@ function App() {
   };
 
   const handleUpdateEmail = (newEmail: string) => {
-    if (!user) return;
+    if (!user || isExampleMode) return;
     const oldEmail = user.email;
     const updatedUser = { ...user, email: newEmail };
     
@@ -85,6 +87,33 @@ function App() {
 
     // 3. Update State
     setUser(updatedUser);
+  };
+
+  const handleImportData = (importedData: UserData, isPermanent: boolean) => {
+    if (isPermanent) {
+      if (window.confirm("This will overwrite your current data with the imported file. Are you sure?")) {
+        // Ensure the email matches the current user or migrate it
+        const updatedData = { ...importedData, email: user?.email || importedData.email };
+        setUser(updatedData);
+        saveUserData(updatedData);
+        setIsExampleMode(false);
+        setOriginalUser(null);
+      }
+    } else {
+      // Example Mode
+      setOriginalUser(user);
+      setUser(importedData);
+      setIsExampleMode(true);
+      setActiveTab(AppTab.DASHBOARD);
+    }
+  };
+
+  const handleExitExampleMode = () => {
+    if (originalUser) {
+      setUser(originalUser);
+      setOriginalUser(null);
+    }
+    setIsExampleMode(false);
   };
 
   const handleSaveLog = (entry: LogEntry) => {
@@ -149,6 +178,18 @@ function App() {
           </div>
           
           <div className="flex items-center space-x-2 md:space-x-4">
+             {isExampleMode && (
+               <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold border border-amber-200 flex items-center gap-1">
+                 <AlertTriangle size={12} />
+                 Example Mode
+                 <button 
+                   onClick={handleExitExampleMode}
+                   className="ml-2 underline hover:text-amber-900"
+                 >
+                   Exit
+                 </button>
+               </div>
+             )}
              <div className="hidden md:block text-sm text-slate-500 mr-2">{user.email}</div>
              
              <button 
@@ -232,6 +273,8 @@ function App() {
                 user={user}
                 onUpdateEmail={handleUpdateEmail}
                 onUpdateFontSize={handleUpdateFontSize}
+                onImportData={handleImportData}
+                isExampleMode={isExampleMode}
               />
            </div>
         )}

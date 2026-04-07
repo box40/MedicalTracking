@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Type, Mail, Save, AlertTriangle, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings as SettingsIcon, Type, Mail, Save, AlertTriangle, Check, Upload, Database, FileJson } from 'lucide-react';
 import { UserData } from '../types';
 
 interface SettingsProps {
   user: UserData;
   onUpdateEmail: (newEmail: string) => void;
   onUpdateFontSize: (size: string) => void;
+  onImportData: (data: UserData, isPermanent: boolean) => void;
+  isExampleMode: boolean;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ user, onUpdateEmail, onUpdateFontSize }) => {
+export const Settings: React.FC<SettingsProps> = ({ user, onUpdateEmail, onUpdateFontSize, onImportData, isExampleMode }) => {
   const [email, setEmail] = useState(user.email);
   const [fontSize, setFontSize] = useState(user.settings?.fontSize || '1.25rem');
   const [customVal, setCustomVal] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
       // Sync local state if user settings change externally
@@ -52,6 +56,28 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateEmail, onUpdat
           setFontSize(newSize);
           onUpdateFontSize(newSize);
       }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isPermanent: boolean) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        // Basic validation
+        if (!json.email || !Array.isArray(json.logs) || !Array.isArray(json.pills)) {
+          throw new Error("Invalid backup file format. Missing required fields.");
+        }
+        onImportData(json as UserData, isPermanent);
+        setImportError(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : "Failed to parse JSON file.");
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -122,6 +148,68 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateEmail, onUpdat
 
           <hr className="border-slate-100" />
 
+          {/* Data Management Section */}
+          <div className="space-y-4">
+             <div className="flex items-center gap-2 mb-2">
+                <Database className="text-amber-600" size={20} />
+                <h4 className="font-semibold text-slate-800">Data Management</h4>
+             </div>
+             <p className="text-slate-500 text-sm mb-4">
+               Upload a backup file to restore your data or view it as an example.
+             </p>
+
+             <div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-400 mb-3">
+                  <FileJson size={24} />
+                </div>
+                <h5 className="font-medium text-slate-700 mb-1">Backup JSON File</h5>
+                <p className="text-xs text-slate-400 mb-4">Select a .json file exported from MedTrack AI</p>
+                
+                <input 
+                  type="file" 
+                  accept=".json"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) => {
+                    // We'll handle the choice via buttons, so we just store the file or use a temporary state
+                    // Actually, let's just trigger the choice after selection
+                  }}
+                />
+
+                <div className="flex flex-wrap justify-center gap-3">
+                   <label className="cursor-pointer px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition flex items-center gap-2">
+                      <Upload size={16} />
+                      Load as Example
+                      <input 
+                        type="file" 
+                        accept=".json"
+                        className="hidden"
+                        onChange={(e) => handleFileChange(e, false)}
+                      />
+                   </label>
+                   <label className="cursor-pointer px-4 py-2 bg-slate-800 border border-slate-800 rounded-lg text-sm font-medium text-white hover:bg-slate-900 transition flex items-center gap-2">
+                      <Save size={16} />
+                      Import Permanently
+                      <input 
+                        type="file" 
+                        accept=".json"
+                        className="hidden"
+                        onChange={(e) => handleFileChange(e, true)}
+                      />
+                   </label>
+                </div>
+                {importError && <p className="text-red-500 text-xs mt-3 font-medium">{importError}</p>}
+                {isExampleMode && (
+                  <p className="text-amber-600 text-xs mt-3 font-medium flex items-center gap-1">
+                    <AlertTriangle size={12} />
+                    Currently viewing example data.
+                  </p>
+                )}
+             </div>
+          </div>
+
+          <hr className="border-slate-100" />
+
           {/* Email Section */}
           <form onSubmit={handleEmailSave} className="space-y-4">
              <div className="flex items-center gap-2 mb-2">
@@ -142,11 +230,12 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateEmail, onUpdat
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  disabled={isExampleMode}
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-100 disabled:text-slate-400"
                 />
                 <button 
                   type="submit"
-                  disabled={email === user.email}
+                  disabled={email === user.email || isExampleMode}
                   className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
                 >
                   <Save size={18} />
@@ -154,6 +243,7 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdateEmail, onUpdat
                 </button>
              </div>
              {isSaved && <p className="text-green-600 text-sm font-medium animate-pulse">Email updated successfully!</p>}
+             {isExampleMode && <p className="text-amber-500 text-xs italic">Email updates are disabled in Example Mode.</p>}
           </form>
 
         </div>
