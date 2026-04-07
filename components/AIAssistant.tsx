@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User as UserIcon, Loader2, Sparkles } from 'lucide-react';
 import { Pill, LogEntry } from '../types';
-import { analyzeHistory, parseNaturalLanguageLog } from '../services/geminiService';
+import { analyzeHistory, parseNaturalLanguageLog, isGeminiEnabled } from '../services/geminiService';
 
 interface AIAssistantProps {
   logs: LogEntry[];
@@ -16,9 +16,12 @@ interface Message {
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({ logs, pills, onAddLog }) => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', content: "Hello! I can help you analyze your history or log medications. Try saying 'I took 2 Ibuprofen just now' or 'How much Caffeine did I have yesterday?'" }
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const initialMessage = isGeminiEnabled() 
+      ? "Hello! I can help you analyze your history or log medications. Try saying 'I took 2 Ibuprofen just now' or 'How much Caffeine did I have yesterday?'"
+      : "Hello! The AI features are currently running in limited mode because no API key was found. I can still help you log medications if you mention their name exactly as saved in your cabinet.";
+    return [{ role: 'ai', content: initialMessage }];
+  });
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

@@ -1,7 +1,16 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Pill, LogEntry, PillTaken } from '../types';
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const isAIConfigured = !!process.env.API_KEY && process.env.API_KEY !== "undefined" && process.env.API_KEY !== "";
+
+const getAI = () => {
+  if (!isAIConfigured) {
+    throw new Error("GEMINI_API_KEY is not configured. Please add it to your environment variables.");
+  }
+  return new GoogleGenAI({ apiKey: process.env.API_KEY! });
+};
+
+export const isGeminiEnabled = () => isAIConfigured;
 
 /**
  * Parses a natural language string to suggest a log entry.
@@ -10,6 +19,32 @@ export const parseNaturalLanguageLog = async (
   input: string,
   availablePills: Pill[]
 ): Promise<{ pillsTaken: PillTaken[], notes: string, confidence: string } | null> => {
+  if (!isAIConfigured) {
+    // Basic mock logic for common patterns if AI is disabled
+    const lowerInput = input.toLowerCase();
+    const foundPills: PillTaken[] = [];
+    
+    availablePills.forEach(p => {
+      if (lowerInput.includes(p.name.toLowerCase())) {
+        // Try to find quantity
+        const words = lowerInput.split(' ');
+        const pillIndex = words.findIndex(w => w.includes(p.name.toLowerCase()));
+        let quantity = 1;
+        if (pillIndex > 0) {
+          const prevWord = words[pillIndex - 1];
+          const num = parseFloat(prevWord);
+          if (!isNaN(num)) quantity = num;
+        }
+        foundPills.push({ pillId: p.id, quantity });
+      }
+    });
+
+    if (foundPills.length > 0) {
+      return { pillsTaken: foundPills, notes: input, confidence: "LOW" };
+    }
+    return null;
+  }
+
   const ai = getAI();
   
   const pillMap = availablePills.map(p => ({ id: p.id, name: p.name })).map(p => `${p.name} (ID: ${p.id})`).join(', ');
@@ -72,6 +107,9 @@ export const analyzeHistory = async (
   logs: LogEntry[],
   pills: Pill[]
 ): Promise<string> => {
+  if (!isAIConfigured) {
+    return "AI analysis is currently disabled because the GEMINI_API_KEY is not set. You can still view your logs in the Diary tab.";
+  }
   const ai = getAI();
 
   // Create a minified text representation of the data to fit context
