@@ -47,4 +47,5 @@ export enum AppTab {
   ASSISTANT = 'assistant',
   REPORTS = 'reports',
   SETTINGS = 'settings',
+  HELP = 'help',
 }

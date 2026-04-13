@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, BriefcaseMedical, Bot, Plus, LogOut, Download, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, BriefcaseMedical, Bot, Plus, LogOut, Download, BarChart3, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { PillCabinet } from './components/PillCabinet';
@@ -7,6 +7,7 @@ import { LogModal } from './components/LogModal';
 import { AIAssistant } from './components/AIAssistant';
 import { Reports } from './components/Reports';
 import { Settings } from './components/Settings';
+import { Help } from './components/Help';
 import { loadUserData, saveUserData, getLastSessionEmail, clearSession, deleteUserData } from './services/storage';
 import { getToken, clearToken, apiGetData } from './services/api';
 import { UserData, AppTab, LogEntry, Pill } from './types';
@@ -191,6 +192,7 @@ function App() {
                 {activeTab === AppTab.ASSISTANT && 'AI Assistant'}
                 {activeTab === AppTab.REPORTS && 'Reports & Analytics'}
                 {activeTab === AppTab.SETTINGS && 'Settings'}
+                {activeTab === AppTab.HELP && 'Help & Guide'}
             </h1>
             
             {activeTab === AppTab.DASHBOARD && (
@@ -241,12 +243,18 @@ function App() {
 
         {activeTab === AppTab.SETTINGS && (
            <div className="max-w-4xl mx-auto">
-              <Settings 
+              <Settings
                 user={user}
                 onUpdateEmail={handleUpdateEmail}
                 onUpdateFontSize={handleUpdateFontSize}
               />
            </div>
+        )}
+
+        {activeTab === AppTab.HELP && (
+          <div className="max-w-3xl mx-auto">
+            <Help />
+          </div>
         )}
       </main>
 
@@ -284,12 +292,19 @@ function App() {
             <BarChart3 size={24} />
             <span className="text-[10px] font-medium mt-1">Reports</span>
           </button>
-          <button 
-            onClick={() => setActiveTab(AppTab.SETTINGS)} 
+          <button
+            onClick={() => setActiveTab(AppTab.SETTINGS)}
             className={`flex flex-col items-center p-2 ${activeTab === AppTab.SETTINGS ? 'text-teal-600' : 'text-slate-400'}`}
           >
             <SettingsIcon size={24} />
             <span className="text-[10px] font-medium mt-1">Settings</span>
+          </button>
+          <button
+            onClick={() => setActiveTab(AppTab.HELP)}
+            className={`flex flex-col items-center p-2 ${activeTab === AppTab.HELP ? 'text-teal-600' : 'text-slate-400'}`}
+          >
+            <HelpCircle size={24} />
+            <span className="text-[10px] font-medium mt-1">Help</span>
           </button>
         </div>
       </nav>
@@ -324,12 +339,19 @@ function App() {
           >
             <Bot size={28} />
           </button>
-           <button 
-            onClick={() => setActiveTab(AppTab.SETTINGS)} 
+           <button
+            onClick={() => setActiveTab(AppTab.SETTINGS)}
             className={`mb-8 p-3 rounded-xl transition ${activeTab === AppTab.SETTINGS ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
             title="Settings"
           >
             <SettingsIcon size={28} />
+          </button>
+          <button
+            onClick={() => setActiveTab(AppTab.HELP)}
+            className={`mb-8 p-3 rounded-xl transition ${activeTab === AppTab.HELP ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
+            title="Help"
+          >
+            <HelpCircle size={28} />
           </button>
       </div>
 
