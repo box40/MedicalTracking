@@ -38,15 +38,3 @@ export async function apiGetData(): Promise<UserData> {
 export async function apiSaveData(data: UserData): Promise<void> {
   await request('PUT', '/data', data);
 }
-
-export async function apiForgotPassword(email: string): Promise<{ message: string; resetLink?: string }> {
-  return request('POST', '/auth/forgot-password', { email });
-}
-
-export async function apiResetPassword(token: string, password: string): Promise<{ token: string; email: string }> {
-  return request('POST', '/auth/reset-password', { token, password });
-}
-
-export async function apiGetProviders(): Promise<{ google: boolean; apple: boolean; yahoo: boolean }> {
-  return request('GET', '/auth/providers');
-}

@@ -9,25 +9,12 @@ import { Reports } from './components/Reports';
 import { Settings } from './components/Settings';
 import { Help } from './components/Help';
 import { loadUserData, saveUserData, getLastSessionEmail, clearSession, deleteUserData } from './services/storage';
-import { getToken, setToken, clearToken, apiGetData } from './services/api';
+import { getToken, clearToken, apiGetData } from './services/api';
 import { UserData, AppTab, LogEntry, Pill } from './types';
 
 function App() {
-  // Pull token/email/reset_token from URL (OAuth callback or password reset link)
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlToken      = urlParams.get('token');
-  const urlEmail      = urlParams.get('email');
-  const urlResetToken = urlParams.get('reset_token');
-  const urlOAuthError = urlParams.get('oauth_error');
-
-  // If OAuth just redirected back with a token, store it immediately
-  if (urlToken && urlEmail) {
-    setToken(urlToken);
-    localStorage.setItem('medtrack_last_session_email', urlEmail.toLowerCase());
-    window.history.replaceState({}, '', '/');
-  }
-
   const [user, setUser] = useState<UserData | null>(() => {
+    // Restore from localStorage cache while we wait for server
     const lastEmail = getLastSessionEmail();
     if (lastEmail && getToken()) {
       return loadUserData(lastEmail);
@@ -162,13 +149,7 @@ function App() {
   };
 
   if (!user) {
-    return (
-      <Login
-        onLogin={handleLogin}
-        resetToken={urlResetToken || undefined}
-        oauthError={urlOAuthError || undefined}
-      />
-    );
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
